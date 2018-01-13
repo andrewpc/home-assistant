@@ -35,16 +35,12 @@ CONF_MIN_VOLUME = 'min_volume'
 CONF_MAX_VOLUME = 'max_volume'
 CONF_SOURCE_DICT = 'sources'
 
-SOURCE_DICT_SCHEMA = vol.Schema({
-    vol.Range(min=1, max=10): cv.string
-})
-
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_SERIAL_PORT): cv.string,
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_MIN_VOLUME, default=DEFAULT_MIN_VOLUME): int,
     vol.Optional(CONF_MAX_VOLUME, default=DEFAULT_MAX_VOLUME): int,
-    vol.Optional(CONF_SOURCE_DICT, default={}): SOURCE_DICT_SCHEMA,
+    vol.Optional(CONF_SOURCE_DICT, default={}): {cv.string: cv.string},
 })
 
 
@@ -116,7 +112,9 @@ class Marantz(MediaPlayerDevice):
         else:
             self._mute = True
 
-        self._volume = self.calc_volume(self._marantz_receiver.main_volume(':', '?'))
+        volume_result = self._marantz_receiver.main_volume(':', '?')
+        if (volume_result != None):
+            self._volume = self.calc_volume(volume_result)
         self._source = self._source_dict.get(
             self._marantz_receiver.main_source(':', '?'))
 
@@ -153,7 +151,8 @@ class Marantz(MediaPlayerDevice):
 
     def set_volume_level(self, volume):
         """Set volume level, range 0..1."""
-        self._marantz_receiver.main_volume(':', '0-' + self.calc_db(volume))
+        vol_calc = '0' + str(self.calc_db(volume))
+        self._marantz_receiver.main_volume(':', vol_calc)
 
     def select_source(self, source):
         """Select input source."""
